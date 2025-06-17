@@ -3,7 +3,7 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    app_name: str = "Mirror"
+    APP_NAME: str = "Mirror"
     BASE_URL: str = "http://localhost:8000"
     DEBUG: bool = False
 

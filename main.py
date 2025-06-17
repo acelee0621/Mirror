@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     logger.info("资源释放完毕。")
 
 
-app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+app = FastAPI(title=settings.APP_NAME, version="0.1.0", lifespan=lifespan)
 
 
 app.add_middleware(
