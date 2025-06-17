@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.16.2",
     "asyncpg>=0.30.0",
     "fastapi[standard]>=0.115.12",
+    "loguru>=0.7.3",
     "pandas>=2.3.0",
     "pydantic-settings>=2.9.1",
     "sqlalchemy>=2.0.41",

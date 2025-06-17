@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "mirror"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
+    
+    # 数据库相关配置
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 3600
+    DB_ECHO: bool = False
 
     # RabbitMQ 配置
     RABBITMQ_URL: str = "localhost:5672"
