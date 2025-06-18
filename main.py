@@ -1,5 +1,5 @@
 from loguru import logger
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -11,6 +11,7 @@ from app.core.database import (
 )
 from app.core.taskiq_app import broker
 from app.utils.migrations import run_migrations
+from app.api import health
 
 
 # Run migrations on startup
@@ -23,7 +24,7 @@ async def lifespan(app: FastAPI):
     logger.info("应用启动，开始加载所有资源...")
 
     try:
-        await setup_database_connection()         
+        await setup_database_connection()
         logger.info("✅ 数据库初始化成功")
     except Exception as e:
         logger.critical(f"❌ 数据库初始化失败: {e}")
@@ -57,10 +58,4 @@ app.add_middleware(
 )
 
 
-app.include_router()
-
-
-@app.get("/health")
-async def health_check(response: Response):
-    response.status_code = 200
-    return {"status": "ok 👍 "}
+app.include_router(health.router)
