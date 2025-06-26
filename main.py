@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
         logger.critical(f"❌ 数据库初始化失败: {e}")
         raise
     await broker.startup()
-    print("所有资源加载完毕，应用准备就绪。🚀")
+    logger.info("所有资源加载完毕，应用准备就绪。🚀")
 
     yield
 
