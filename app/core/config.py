@@ -9,10 +9,10 @@ class Settings(BaseSettings):
 
     # PostgreSQL 配置
     POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: str = "5432"
-    POSTGRES_DB: str = "mirror"
+    POSTGRES_PORT: str = "5432"    
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "mirror"
     
     # 数据库相关配置
     DB_POOL_SIZE: int = 20
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "localhost:6379"
 
     # 上传文件路径配置
-    LOCAL_STORAGE_PATH: str = "temp/"
+    LOCAL_STORAGE_PATH: str = "uploads/"
 
     
 
