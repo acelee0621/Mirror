@@ -22,7 +22,9 @@ async def check_database_health(db: AsyncSession = Depends(get_db)):
 async def check_redis_health():
     try:
         redis = Redis.from_url(
-            f"redis://{settings.REDIS_HOST}", encoding="utf-8", decode_responses=True
+            f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
+            encoding="utf-8",
+            decode_responses=True,
         )
         pong = await redis.ping()
         await redis.close()
@@ -38,7 +40,7 @@ async def check_rabbitmq_health():
     try:
         conn = await aio_pika.connect_robust(
             f"amqp://{settings.RABBITMQ_USER}:{settings.RABBITMQ_PASSWORD}"
-            f"@{settings.RABBITMQ_HOST}/"
+            f"@{settings.RABBITMQ_HOST}:{settings.RABBITMQ_PORT}/"
         )
         await conn.close()
         return {"status": "ok", "detail": "RabbitMQ 连接成功"}

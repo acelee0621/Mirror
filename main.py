@@ -1,7 +1,7 @@
 from loguru import logger
-from fastapi import FastAPI
-
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
@@ -59,3 +59,9 @@ app.add_middleware(
 
 
 app.include_router(health.router)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global exception: {exc}")
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})

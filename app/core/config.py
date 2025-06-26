@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     # PostgreSQL 配置
     POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: str = "5432"    
+    POSTGRES_PORT: int = 5432    
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "mirror"
@@ -22,12 +22,14 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False
 
     # RabbitMQ 配置
-    RABBITMQ_URL: str = "localhost:5672"
+    RABBITMQ_HOST: str = "localhost"
+    RABBITMQ_PORT: int = 5672
     RABBITMQ_USER: str = "user"
     RABBITMQ_PASSWORD: str = "bitnami"
 
     # Redis 配置
-    REDIS_URL: str = "localhost:6379"
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
 
     # 上传文件路径配置
     LOCAL_STORAGE_PATH: str = "uploads/"
