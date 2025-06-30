@@ -23,13 +23,13 @@ class Settings(BaseSettings):
 
     # RabbitMQ 配置
     RABBITMQ_HOST: str = "localhost"
-    RABBITMQ_PORT: int = 5672
+    RABBITMQ_PORT: str = "5672"
     RABBITMQ_USER: str = "user"
     RABBITMQ_PASSWORD: str = "bitnami"
 
     # Redis 配置
     REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
+    REDIS_PORT: str = "6379"
 
     # 上传文件路径配置
     LOCAL_STORAGE_PATH: str = "uploads/"

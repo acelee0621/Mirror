@@ -29,7 +29,7 @@ class CustomAioPikaBroker(AioPikaBroker):
 # 使用您的自定义 broker 类创建 broker 实例
 broker = CustomAioPikaBroker(
     f"amqp://{settings.RABBITMQ_USER}:{settings.RABBITMQ_PASSWORD}"
-    f"@{settings.RABBITMQ_HOST}:{settings.RABBITMQ_PORT}///"
+    f"@{settings.RABBITMQ_HOST}:{settings.RABBITMQ_PORT}//"
 )
 
 # 创建使用 Redis 的结果后端

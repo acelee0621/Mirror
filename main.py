@@ -11,7 +11,8 @@ from app.core.database import (
 )
 from app.core.taskiq_app import broker
 from app.utils.migrations import run_migrations
-from app.api import health
+from app.api.v1 import health
+from app.api.v1.endpoints import file_upload
 
 
 # Run migrations on startup
@@ -59,6 +60,7 @@ app.add_middleware(
 
 
 app.include_router(health.router)
+app.include_router(file_upload.router)
 
 
 @app.exception_handler(Exception)

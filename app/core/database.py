@@ -12,9 +12,19 @@ from app.core.config import settings
 
 
 # --- 1. 全局变量定义 ---
-# 这些全局变量将由各自的启动逻辑来填充。
-engine: Optional[AsyncEngine] = None
-SessionLocal: Optional[async_sessionmaker[AsyncSession]] = None
+_db_initialized = False
+_engine: Optional[AsyncEngine] = None
+_SessionLocal: Optional[async_sessionmaker[AsyncSession]] = None
+
+def get_engine() -> AsyncEngine:
+    if _engine is None:
+        raise RuntimeError("数据库引擎未初始化. 请先调用 setup_database_connection")
+    return _engine
+
+def get_session_local() -> async_sessionmaker[AsyncSession]:
+    if _SessionLocal is None:
+        raise RuntimeError("会话工厂未初始化. 请先调用 setup_database_connection")
+    return _SessionLocal
 
 POSTGRES_DATABASE_URL = (
     f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
@@ -33,22 +43,24 @@ async def setup_database_connection():
     初始化全局的数据库引擎和会话工厂。
     这是一个通用的设置函数，可以在 FastAPI 或 TaskIQ worker 启动时调用。
     """
-    global engine, SessionLocal
-    if engine is not None and SessionLocal is not None:
+    global _engine, _SessionLocal, _db_initialized
+    if _db_initialized:
         logger.info("数据库已初始化，跳过重复设置。")
-        return
+        return    
 
-    engine = create_async_engine(
+    _engine = create_async_engine(
         POSTGRES_DATABASE_URL,
         pool_size=settings.DB_POOL_SIZE,
         max_overflow=settings.DB_MAX_OVERFLOW,
         pool_timeout=settings.DB_POOL_TIMEOUT,
         pool_recycle=settings.DB_POOL_RECYCLE,
         echo=settings.DB_ECHO,
+        pool_pre_ping=True,
     )
-    SessionLocal = async_sessionmaker(
-        class_=AsyncSession, expire_on_commit=False, bind=engine
+    _SessionLocal = async_sessionmaker(
+        class_=AsyncSession, expire_on_commit=False, bind=_engine
     )
+    _db_initialized = True
     logger.info("数据库引擎和会话工厂已创建。")
 
 async def shutdown_database_connection():
@@ -56,11 +68,12 @@ async def shutdown_database_connection():
     关闭全局的数据库引擎连接池。
     这是一个通用的关闭函数，可以在 FastAPI 或 TaskIQ worker 关闭时调用。
     """
-    global engine
-    if engine:
-        await engine.dispose()
-        engine = None # 清理引用
-        SessionLocal = None # 清理引用
+    global _engine, _SessionLocal, _db_initialized
+    if _engine:
+        await _engine.dispose()
+        _engine = None # 清理引用
+        _SessionLocal = None # 清理引用
+        _db_initialized = False
         logger.info("数据库引擎连接池已关闭。")
 
 
@@ -70,12 +83,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     为每个请求或任务提供数据库会话。
     它现在依赖由 setup_database_connection 管理的全局 SessionLocal。
     """
-    if SessionLocal is None:
+    if _SessionLocal is None:
         # 这个错误通常不应该在正确配置的生产环境中出现
         # 它表明 setup_database_connection 未在应用或worker启动时调用
         raise Exception("数据库未初始化。请检查 FastAPI 的 lifespan 或 TaskIQ worker 的启动配置。")
 
-    async with SessionLocal() as session:
+    async with _SessionLocal() as session:
         yield session
 
 # TaskIQ 专用的快捷依赖项
@@ -84,7 +97,17 @@ get_db_for_taskiq = TaskiqDepends(get_db)
 
 # --- 4. 数据库表创建工具 (如果需要) ---
 async def create_db_and_tables():
-    if not engine:
+    if not _engine:
         raise Exception("无法创建表，因为数据库引擎未初始化。")
-    async with engine.begin() as conn:
+    async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+
+# 用于临时使用的数据库会话
+async def get_session() -> AsyncSession:
+    """
+    获取一个数据库会话，需要手动关闭
+    """
+    if _SessionLocal is None:
+        raise RuntimeError("Database not initialized. Call setup_database_connection first.")
+    return _SessionLocal()
