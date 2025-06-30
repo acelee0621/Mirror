@@ -158,7 +158,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await session.refresh(db_obj)
         return db_obj
 
-    async def delete(self, session: AsyncSession, *, id: Any) -> ModelType | None:
+    async def delete(self, session: AsyncSession, *, id: Any) -> None:
         """
         根据 ID 删除一个记录。
 
@@ -167,7 +167,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             id: 记录的主键 ID。
 
         返回:
-            被删除的 SQLAlchemy 模型对象，如果未找到则返回 None。
+            成功删除后不返回任何内容。
         """
         obj = await self.get(session, id)
         if obj:
