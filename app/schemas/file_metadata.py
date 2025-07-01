@@ -3,9 +3,6 @@ from datetime import datetime
 from app.schemas.base import BaseSchema
 
 
-# ===================================================================
-# File 相关模型
-# ===================================================================
 # 定义了所有FileMetadata变体共有的字段
 class FileMetadataBase(BaseSchema):
     filename: str

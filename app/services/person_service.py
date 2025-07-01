@@ -19,7 +19,6 @@ class PersonService:
 
     async def get_person_by_id(self, session: AsyncSession, person_id: int) -> Person:
         """通过ID获取一个Person，并包含其所有账户信息"""
-        # --- 修正点：调用新的、能预加载账户的方法 ---
         person = await self.repository.get_with_accounts(session, person_id=person_id)
         if not person:
             raise NotFoundException(detail=f"ID为 {person_id} 的用户不存在。")
@@ -43,7 +42,6 @@ class PersonService:
         self, session: AsyncSession, *, person_id: int, person_in: PersonUpdate
     ) -> Person:
         """更新一个Person"""
-        # 更新后，也需要重新获取并预加载所有关联数据
         db_person = await self.get_person_by_id(session, person_id)
         updated_person = await self.repository.update(
             session, db_obj=db_person, obj_in=person_in

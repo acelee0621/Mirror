@@ -1,5 +1,5 @@
 # app/schemas/person.py
-from pydantic import ConfigDict, Field
+from pydantic import Field
 
 from app.schemas.base import BaseSchema
 from app.schemas.account import AccountPublic
@@ -24,7 +24,6 @@ class PersonPublic(BaseSchema):
     full_name: str
     id_type: str | None = None
     id_number: str | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 
 class PersonWithAccounts(PersonPublic):

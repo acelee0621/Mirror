@@ -23,8 +23,6 @@ class AccountUpdate(AccountBase):
 
 
 # --- 公开模型 ---
-
-
 # 创建一个不包含owner的、轻量级的公开模型
 # 它将被用于嵌套在Person的响应中
 class AccountPublic(AccountBase):

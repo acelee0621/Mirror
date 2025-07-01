@@ -75,7 +75,7 @@ class FileService:
         file_extension = Path(file.filename).suffix
         file_path = self._save_file_locally(file_content, file_hash, file_extension)
 
-        # 4. 准备要存入数据库的元数据        
+        # 4. 准备要存入数据库的元数据
         file_meta_in = FileMetadataCreate(
             filename=file.filename,
             file_path=file_path,

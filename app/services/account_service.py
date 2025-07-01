@@ -43,7 +43,6 @@ class AccountService:
                 detail=f"账号为 '{account_in.account_number}' 的账户已存在。"
             )
 
-        # --- 修正点 ---
         # 3. 直接调用仓库层中为Account定制的、更专业的创建方法
         db_account = await self.repository.create_with_owner(
             session, obj_in=account_in, owner_id=owner_id

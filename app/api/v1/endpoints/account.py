@@ -11,7 +11,6 @@ router = APIRouter(tags=["Accounts"])
 
 @router.post(
     "/persons/{person_id}/accounts",
-    # 创建后返回完整的、带owner信息的账户
     response_model=AccountPublicWithOwner,
     status_code=status.HTTP_201_CREATED,
     summary="为指定用户创建新账户",
@@ -29,7 +28,6 @@ async def create_new_account(
 
 @router.get(
     "/accounts/{account_id}",
-    # 直接查询账户时，返回带owner信息的完整模型
     response_model=AccountPublicWithOwner,
     summary="获取指定ID的账户",
 )
@@ -43,7 +41,6 @@ async def get_account_by_id(
 
 @router.patch(
     "/accounts/{account_id}",
-    # 更新后也返回带owner信息的完整模型
     response_model=AccountPublicWithOwner,
     summary="更新账户信息",
 )

@@ -59,10 +59,10 @@ app.add_middleware(
 )
 
 
-app.include_router(health.router)
-app.include_router(person.router)
-app.include_router(account.router)
-app.include_router(file_upload.router)
+app.include_router(health.router, prefix="/api/v1")
+app.include_router(person.router, prefix="/api/v1")
+app.include_router(account.router, prefix="/api/v1")
+app.include_router(file_upload.router, prefix="/api/v1")
 
 
 @app.exception_handler(Exception)
