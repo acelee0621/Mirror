@@ -4,8 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.services.person_service import PersonService
-
-# 导入所有需要的Schema
 from app.schemas.person import (
     PersonCreate,
     PersonUpdate,
@@ -18,7 +16,7 @@ router = APIRouter(prefix="/persons", tags=["Persons"])
 
 @router.post(
     "/",
-    response_model=PersonPublic,  # 创建时返回轻量级信息
+    response_model=PersonPublic,
     status_code=status.HTTP_201_CREATED,
     summary="创建新用户",
 )
@@ -30,11 +28,7 @@ async def create_new_person(
     return await service.create_person(session, person_in=person_in)
 
 
-@router.get(
-    "/",
-    response_model=list[PersonPublic],  # 获取列表时，返回轻量级信息，不包含账户
-    summary="获取用户列表",
-)
+@router.get("/", response_model=list[PersonPublic], summary="获取用户列表")
 async def get_all_persons(
     session: AsyncSession = Depends(get_db),
     service: PersonService = Depends(),

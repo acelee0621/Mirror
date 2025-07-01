@@ -1,15 +1,10 @@
 # app/schemas/account.py
 from pydantic import Field
-
 from app.schemas.base import BaseSchema
 
 
 # --- 基础模型 ---
 class AccountBase(BaseSchema):
-    """
-    Account 模型的共用基础字段。
-    """
-
     account_name: str | None = Field(None, max_length=100)
     account_number: str | None = Field(None, max_length=100)
     account_type: str | None = Field(None, max_length=50)
@@ -18,24 +13,28 @@ class AccountBase(BaseSchema):
 
 # --- 创建模型 ---
 class AccountCreate(AccountBase):
-    """
-    创建 Account 时使用的模型。
-    """
-
     account_name: str = Field(..., max_length=100)
     account_number: str = Field(..., max_length=100)
 
 
 # --- 更新模型 ---
 class AccountUpdate(AccountBase):
-    """
-    更新 Account 时使用的模型。所有字段都是可选的。
-    """
-
     pass
 
 
-# --- 公开模型（API返回）---
+# --- 公开模型 ---
+
+
+# 创建一个不包含owner的、轻量级的公开模型
+# 它将被用于嵌套在Person的响应中
+class AccountPublic(AccountBase):
+    """
+    用于嵌套在其他模型中的、轻量级的Account公开信息。
+    """
+
+    id: int
+
+
 # 为了在返回账户信息时，能一并展示其所有者的基本信息，
 # 我们先定义一个嵌套的Person模型。
 class PersonInAccountPublic(BaseSchema):
@@ -43,10 +42,11 @@ class PersonInAccountPublic(BaseSchema):
     full_name: str
 
 
-class AccountPublic(AccountBase):
+# 创建一个包含owner的、完整的公开模型
+# 它将被用于直接查询单个Account时返回
+class AccountPublicWithOwner(AccountPublic):
     """
-    通过API返回给前端的公开模型。
+    用于直接返回单个Account时的完整公开信息，包含所有者。
     """
 
-    id: int
-    owner: PersonInAccountPublic  # 嵌套显示所有者信息
+    owner: PersonInAccountPublic

@@ -1,8 +1,6 @@
 # app/schemas/person.py
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
-
-# 导入我们之前为Account定义的公开Schema
 from app.schemas.base import BaseSchema
 from app.schemas.account import AccountPublic
 
@@ -22,22 +20,17 @@ class PersonUpdate(PersonBase):
 
 
 class PersonPublic(BaseSchema):
-    """
-    用于返回“轻量级”用户信息的模型，比如在列表中。
-    不包含关联的账户信息。
-    """
-
     id: int
     full_name: str
     id_type: str | None = None
     id_number: str | None = None
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PersonWithAccounts(PersonPublic):
     """
     用于返回单个用户详细信息的模型。
-    它继承了PersonPublic的所有字段，并增加了accounts列表。
     """
 
-    # 关键点：定义一个AccountPublic的列表，并提供一个空列表作为默认值
+    # 它引用的是不包含owner的AccountPublic
     accounts: list[AccountPublic] = []

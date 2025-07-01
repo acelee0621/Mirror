@@ -4,14 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.services.account_service import AccountService
-from app.schemas.account import AccountCreate, AccountUpdate, AccountPublic
+from app.schemas.account import AccountCreate, AccountUpdate, AccountPublicWithOwner
 
 router = APIRouter(tags=["Accounts"])
 
 
 @router.post(
     "/persons/{person_id}/accounts",
-    response_model=AccountPublic,
+    # 创建后返回完整的、带owner信息的账户
+    response_model=AccountPublicWithOwner,
     status_code=status.HTTP_201_CREATED,
     summary="为指定用户创建新账户",
 )
@@ -21,17 +22,16 @@ async def create_new_account(
     session: AsyncSession = Depends(get_db),
     service: AccountService = Depends(),
 ):
-    """
-    为指定ID的用户创建一个新的银行账户。
-    """
-    # 将从URL获取的person_id传递给服务层
     return await service.create_account(
         session, owner_id=person_id, account_in=account_in
     )
 
 
 @router.get(
-    "/accounts/{account_id}", response_model=AccountPublic, summary="获取指定ID的账户"
+    "/accounts/{account_id}",
+    # 直接查询账户时，返回带owner信息的完整模型
+    response_model=AccountPublicWithOwner,
+    summary="获取指定ID的账户",
 )
 async def get_account_by_id(
     account_id: int,
@@ -42,7 +42,10 @@ async def get_account_by_id(
 
 
 @router.patch(
-    "/accounts/{account_id}", response_model=AccountPublic, summary="更新账户信息"
+    "/accounts/{account_id}",
+    # 更新后也返回带owner信息的完整模型
+    response_model=AccountPublicWithOwner,
+    summary="更新账户信息",
 )
 async def update_account_info(
     account_id: int,
