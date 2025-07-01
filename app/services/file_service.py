@@ -1,4 +1,5 @@
 # app/services/file_service.py
+import os
 import hashlib
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
@@ -9,7 +10,7 @@ from app.core.config import settings
 from app.repository.file_metadata import file_metadata_repository
 from app.schemas.file_metadata import FileMetadataCreate
 from app.models.file_metadata import FileMetadata
-from app.core.exceptions import AlreadyExistsException
+from app.core.exceptions import AlreadyExistsException, NotFoundException
 
 
 class FileService:
@@ -89,6 +90,40 @@ class FileService:
         db_file_meta = await self.repository.create(session, obj_in=file_meta_in)
 
         return db_file_meta
+    
+    
+    async def get_files_by_account(
+        self, session: AsyncSession, *, account_id: int, skip: int = 0, limit: int = 100
+    ) -> list[FileMetadata]:
+        """获取指定账户下的所有文件元数据"""
+        return await self.repository.get_multi_by_account_id(
+            session, account_id=account_id, skip=skip, limit=limit
+        )
+
+    async def get_file_by_id(self, session: AsyncSession, *, file_id: int) -> FileMetadata:
+        """通过ID获取单个文件元数据"""
+        file_meta = await self.repository.get(session, id=file_id)
+        if not file_meta:
+            raise NotFoundException(detail=f"ID为 {file_id} 的文件不存在。")
+        return file_meta
+
+    async def delete_file(self, session: AsyncSession, *, file_id: int) -> None:
+        """删除一个文件，包括数据库记录和物理文件"""
+        # 1. 先获取元数据，确保文件存在，并拿到物理路径
+        file_to_delete = await self.get_file_by_id(session, file_id=file_id)
+        
+        # 2. 删除物理文件
+        try:
+            file_path = Path(file_to_delete.file_path)
+            if file_path.exists():
+                os.remove(file_path)
+                logger.info(f"已成功删除物理文件: {file_path}")
+        except Exception as e:
+            # 即使物理文件删除失败，也只记录错误，继续删除数据库记录
+            logger.error(f"删除物理文件失败: {file_to_delete.file_path}. 错误: {e}")
+
+        # 3. 删除数据库记录
+        await self.repository.delete(session, id=file_id)
 
 
 # 创建一个服务层的单例，方便在路由层注入和使用

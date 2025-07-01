@@ -1,10 +1,19 @@
 # app/api/v1/endpoints/file_upload.py
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    UploadFile,
+    File,
+    Form,
+    HTTPException,
+    status,
+    Response,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from app.core.database import get_db
-from app.services.file_service import file_service
+from app.services.file_service import file_service, FileService
 from app.schemas.file_metadata import FileMetadataPublic
 
 # 创建一个新的路由器，用于管理文件上传相关的端点
@@ -64,3 +73,52 @@ async def upload_transaction_file(
         # 对于其他未知错误，记录日志并返回一个通用的服务器错误
         logger.error(f"处理文件上传时发生未知错误: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="处理文件时发生内部错误。")
+
+
+@router.get(
+    "/by_account/{account_id}",
+    response_model=list[FileMetadataPublic],
+    summary="获取指定账户下的所有上传文件",
+)
+async def get_files_for_account(
+    account_id: int,
+    session: AsyncSession = Depends(get_db),
+    service: FileService = Depends(),
+    skip: int = 0,
+    limit: int = 100,
+):
+    """
+    获取指定银行账户下所有已上传文件的元数据列表。
+    """
+    return await service.get_files_by_account(
+        session, account_id=account_id, skip=skip, limit=limit
+    )
+
+
+@router.get(
+    "/{file_id}", response_model=FileMetadataPublic, summary="获取单个文件的元数据"
+)
+async def get_file_metadata_by_id(
+    file_id: int,
+    session: AsyncSession = Depends(get_db),
+    service: FileService = Depends(),
+):
+    """
+    根据文件ID获取其详细元数据。
+    """
+    return await service.get_file_by_id(session, file_id=file_id)
+
+
+@router.delete(
+    "/{file_id}", status_code=status.HTTP_204_NO_CONTENT, summary="删除一个已上传的文件"
+)
+async def delete_uploaded_file(
+    file_id: int,
+    session: AsyncSession = Depends(get_db),
+    service: FileService = Depends(),
+):
+    """
+    删除一个文件，将同时删除数据库中的元数据记录和服务器上的物理文件。
+    """
+    await service.delete_file(session, file_id=file_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
