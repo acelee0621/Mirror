@@ -17,8 +17,8 @@ class FileService:
     处理文件上传和相关业务逻辑的服务层。
     """
 
-    def __init__(self, repository=file_metadata_repository):
-        self.repository = repository
+    def __init__(self):
+        self.repository = file_metadata_repository
         self.upload_path = Path(settings.LOCAL_STORAGE_PATH)
         self.upload_path.mkdir(parents=True, exist_ok=True)
 
