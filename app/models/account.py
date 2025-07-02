@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.person import Person
     from app.models.transaction import Transaction
+    from app.models.file_metadata import FileMetadata
 
 
 class Account(Base):
@@ -36,4 +37,9 @@ class Account(Base):
     owner: Mapped["Person"] = relationship(back_populates="accounts")
 
     # Relationship to Transaction
-    transactions: Mapped[list["Transaction"]] = relationship(back_populates="account")
+    transactions: Mapped[list["Transaction"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
+    files: Mapped[list["FileMetadata"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )

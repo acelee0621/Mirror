@@ -21,4 +21,6 @@ class Person(Base):
     id_number: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Relationship to Account
-    accounts: Mapped[list["Account"]] = relationship(back_populates="owner")
+    accounts: Mapped[list["Account"]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan"
+    )

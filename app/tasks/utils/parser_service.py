@@ -1,5 +1,4 @@
 # app/tasks/utils/parser_service.py
-import re
 from pathlib import Path
 
 import pandas as pd
@@ -7,6 +6,7 @@ import numpy as np
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.enums import CounterpartyType
 from app.repository.counterparty import counterparty_repository
 from app.repository.transaction import transaction_repository
 
@@ -40,11 +40,42 @@ class ParserService:
             ],
             "counterparty_account_number": ["交易对方账号", "对方账号", "对方账户账号"],
             "merchant_name": ["商户名称"],
-            "transaction_method": ["交易类型", "交易渠道"],
+            "transaction_method": ["交易类型", "交易渠道", "交易方式"],
             "is_cash_flag": ["现金标志"],
             "location": ["交易发生地"],
             "branch_name": ["交易网点名称", "交易机构"],
         }
+
+        # 对手类型关键词
+        self.MERCHANT_KEYWORDS = [
+            "公司",
+            "机构",
+            "科技",
+            "网络",
+            "支付",
+            "技术",
+            "银行",
+            "物业",
+            "管理",
+            "财付通",
+            "支付宝",
+            "银联",
+            "三快",
+            "唯品会",
+            "钱袋宝",
+            "微众",
+            "抖音",
+            "电商",
+            "商户",
+            "平台",
+            "快递",
+            "服饰",
+            "股份",
+            "商业",
+            "便购",
+            "咖啡",
+            "餐饮",
+        ]
 
     def _read_file_to_dataframe(self, file_path: str) -> pd.DataFrame:
         """
@@ -61,13 +92,71 @@ class ParserService:
 
     def _normalize_counterparty_name(self, name: str | None) -> str:
         """
-        标准化交易对手方的名称
+        标准化交易对手方的名称 (当前为直通模式，保留原始名称以便测试)
         """
-        if not name or not isinstance(name, str):
+        # 1. 保留入口处的安全检查，增加对纯空格字符串的判断
+        if not name or not isinstance(name, str) or not name.strip():
             return "未知对手"
-        name = re.sub(r"[\(（].*?[\)）]", "", name)
-        name = name.replace("有限公司", "").replace("客户备付金", "").strip()
-        return name if name else "未知对手"
+
+        # 2. 暂时不进行任何替换或标准化操作，直接返回原始名称
+        return name
+
+    def _classify_counterparty(self, name: str) -> CounterpartyType:
+        """根据名称中的关键词，使用启发式规则对对手方进行分类 (草鸡版)"""
+        # 将名称转为小写并去除空格，以提高匹配成功率
+        normalized_name = name.lower().strip()
+
+        if not normalized_name or normalized_name == "未知对手":
+            return CounterpartyType.UNKNOWN
+
+        # 1. 优先根据关键词判断
+        for keyword in self.MERCHANT_KEYWORDS:
+            if keyword.lower() in normalized_name:
+                if any(p in normalized_name for p in ["支付", "财付通", "支付宝"]):
+                    return CounterpartyType.PAYMENT_PLATFORM
+                if "银行" in normalized_name or "银联" in normalized_name:
+                    return CounterpartyType.BANK
+                return CounterpartyType.MERCHANT
+
+        # 2. 长度启发式规则
+        if len(normalized_name) > 7:
+            return CounterpartyType.MERCHANT
+
+        # 3. 默认是个人
+        return CounterpartyType.PERSON
+
+    def _determine_is_cash(self, row: pd.Series) -> bool:
+        """
+        一个更智能的函数，用于判断单笔交易是否为现金交易。（V2版：健壮性修复）
+        它会检查多个列来寻找线索，并能正确处理None值。
+        """
+
+        # 规则1：检查“现金标志”列
+        cash_flag = row.get("is_cash_flag")  # 直接获取值，可能是字符串或None
+        if isinstance(cash_flag, str) and cash_flag.strip() == "现金交易":
+            logger.trace(
+                f"Row {row.name}: 通过'现金标志'列找到现金交易 ('{cash_flag}')"
+            )
+            return True
+
+        # 规则2：检查“交易摘要”列
+        description = row.get("description")
+        if isinstance(description, str) and (
+            "现金存入" in description or "现金支取" in description
+        ):
+            logger.trace(
+                f"Row {row.name}: 通过'交易摘要'列找到现金交易 ('{description}')"
+            )
+            return True
+
+        # 规则3：检查“交易类型/渠道”列
+        method = row.get("transaction_method")
+        if isinstance(method, str) and ("现金存款" in method or "现金取款" in method):
+            logger.trace(f"Row {row.name}: 通过'交易方式'列找到现金交易 ('{method}')")
+            return True
+
+        # 如果以上所有规则都不满足，则默认为非现金交易
+        return False
 
     def _clean_and_transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -191,9 +280,8 @@ class ParserService:
         cleaned_df["balance_after_txn"] = pd.to_numeric(
             cleaned_df["balance_after_txn"], errors="coerce"
         )
-        cleaned_df["is_cash"] = cleaned_df["is_cash_flag"].apply(
-            lambda x: str(x) == "是"
-        )
+        logger.info("正在通过多列分析来判断现金交易...")
+        cleaned_df["is_cash"] = cleaned_df.apply(self._determine_is_cash, axis=1)
         cleaned_df["counterparty_name"] = cleaned_df["counterparty_name"].fillna(
             cleaned_df.get("merchant_name")
         )
@@ -231,10 +319,14 @@ class ParserService:
                 normalized_name = self._normalize_counterparty_name(
                     row.get("counterparty_name")
                 )
+
+                counterparty_type = self._classify_counterparty(normalized_name)
+
                 counterparty = await counterparty_repository.get_or_create(
                     session,
                     name=normalized_name,
                     account_number=row.get("counterparty_account_number"),
+                    counterparty_type=counterparty_type.value,
                 )
 
                 transaction_data = {

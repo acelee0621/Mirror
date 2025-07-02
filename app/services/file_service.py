@@ -130,7 +130,7 @@ class FileService:
             logger.error(f"删除物理文件失败: {file_to_delete.file_path}. 错误: {e}")
 
         # 3. 删除数据库记录
-        await self.repository.delete(session, id=file_id)
+        await self.repository.delete_obj(session, db_obj=file_to_delete)
 
 
 # 创建一个服务层的单例，方便在路由层注入和使用

@@ -84,7 +84,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                         statement = statement.order_by(desc(column))
                     else:
                         statement = statement.order_by(asc(column))
-        
+
         statement = statement.offset(skip).limit(limit)
         result = await session.scalars(statement)
         # 将 .all() 返回的 Sequence 显式转换为 list，以匹配类型注解
@@ -160,16 +160,18 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def delete(self, session: AsyncSession, *, id: Any) -> None:
         """
-        根据 ID 删除一个记录。
-
-        参数:
-            session: 数据库会话。
-            id: 记录的主键 ID。
-
-        返回:
-            成功删除后不返回任何内容。
+        【对外方法】根据ID删除一个对象，这是一个独立、完整的操作，包含commit。
+        适用于简单的、一次性的删除场景。
         """
         obj = await self.get(session, id)
         if obj:
             await session.delete(obj)
-            await session.commit()
+            await session.commit()  # <--- 在这里 commit
+
+    async def delete_obj(self, session: AsyncSession, *, db_obj: Base) -> None:
+        """
+        【内部方法】删除一个已知的ORM对象，但不提交事务。
+        适用于由上层服务统一管理事务的复杂场景（如循环删除）。
+        """
+        await session.delete(db_obj)
+        await session.flush()

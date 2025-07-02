@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from typing import List, Dict, Any
+from typing import Any
 
 from app.repository.base import BaseRepository
 from app.models.transaction import Transaction
@@ -28,7 +28,7 @@ class TransactionRepository(
 
     async def get_multi_by_account_id(
         self, session: AsyncSession, *, account_id: int, skip: int = 0, limit: int = 100
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         statement = (
             select(self.model)
             .where(self.model.account_id == account_id)
@@ -46,7 +46,7 @@ class TransactionRepository(
         self,
         session: AsyncSession,
         *,
-        transactions_data: List[Dict[str, Any]],
+        transactions_data: list[dict[str, Any]],
         chunk_size: int = 500,
     ):
         """

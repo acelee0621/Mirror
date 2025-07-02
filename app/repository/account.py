@@ -62,6 +62,18 @@ class AccountRepository(BaseRepository[Account, AccountCreate, AccountUpdate]):
         result = await session.scalars(statement)
         return result.one_or_none()
 
+    async def get_with_files(self, session: AsyncSession, id: int) -> Account | None:
+        """
+        获取一个账户，并预先加载其关联的 files 集合。
+        """
+        statement = (
+            select(self.model)
+            .where(self.model.id == id)
+            .options(selectinload(self.model.files))  # <--- 核心：在这里指定预加载
+        )
+        result = await session.scalars(statement)
+        return result.one_or_none()
+
 
 # 创建仓库的单例
 account_repository = AccountRepository(Account)

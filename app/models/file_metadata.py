@@ -28,4 +28,4 @@ class FileMetadata(Base):
 
     # 关系：这个文件属于哪个银行账户
     account_id: Mapped[int] = mapped_column(ForeignKey("account.id"))
-    account: Mapped["Account"] = relationship()
+    account: Mapped["Account"] = relationship(back_populates="files")

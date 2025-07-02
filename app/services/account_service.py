@@ -1,4 +1,5 @@
 # app/services/account_service.py
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repository.account import account_repository
@@ -6,6 +7,7 @@ from app.repository.person import person_repository
 from app.schemas.account import AccountCreate, AccountUpdate
 from app.models.account import Account
 from app.core.exceptions import NotFoundException, AlreadyExistsException
+from app.services.file_service import file_service
 
 
 class AccountService:
@@ -77,8 +79,27 @@ class AccountService:
         return await self.get_account_by_id(session, account_id=updated_account.id)
 
     async def delete_account(self, session: AsyncSession, *, account_id: int) -> None:
-        await self.get_account_by_id(session, account_id)
-        await self.repository.delete(session, id=account_id)
+        # 1. 预加载获取账户对象
+        account_to_delete = await self.repository.get_with_files(session, id=account_id)
+        if not account_to_delete:
+            raise NotFoundException(detail=f"ID为 {account_id} 的账户不存在。")
+
+        # 2. 循环调用delete_file方法
+        # 注意：这里我们倒序遍历，只是一个好习惯，非必需
+        for file_meta in reversed(account_to_delete.files):
+            logger.info(
+                f"准备删除账户 {account_id} 的关联文件: {file_meta.filename} (ID: {file_meta.id})"
+            )
+            # 这个调用现在不会commit了
+            await file_service.delete_file(session, file_id=file_meta.id)
+
+        # 3. 删除账户本身（这会级联删除所有Transaction）
+        logger.info(f"准备删除账户 {account_id} 及其所有交易记录...")
+        await self.repository.delete_obj(session, db_obj=account_to_delete)
+
+        # 4. 所有操作都已加入session，在最后进行一次总提交！
+        await session.commit()
+        logger.success(f"账户 {account_id} 已被彻底删除。")
 
 
 account_service = AccountService()
