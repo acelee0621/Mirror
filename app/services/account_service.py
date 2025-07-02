@@ -90,7 +90,7 @@ class AccountService:
             logger.info(
                 f"准备删除账户 {account_id} 的关联文件: {file_meta.filename} (ID: {file_meta.id})"
             )
-            # 这个调用现在不会commit了
+            # 这个调用不会commit
             await file_service.delete_file(session, file_id=file_meta.id)
 
         # 3. 删除账户本身（这会级联删除所有Transaction）
