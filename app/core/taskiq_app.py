@@ -41,6 +41,12 @@ result_backend = RedisAsyncResultBackend(
 broker.result_backend = result_backend
 
 # 导入任务模块 (确保任务被 TaskIQ 发现，防止循环引用)
-# from app.tasks import document_task
+# 如果启用任务发现就不需要
+# from app.tasks import tasks
 
-# uv run taskiq worker app.core.taskiq_app:broker --log-level INFO/DEBUG --fsd/--tasks-pattern "app/tasks/*.py"
+# 启动 worker 命令
+# （官方推荐的命令，但是一定要将任务文件放在app/tasks/tasks.py中）
+# uv run taskiq worker app.core.taskiq_app:broker --log-level INFO --fs-discover
+
+# 另一个可用的命令
+# uv run taskiq worker app.core.taskiq_app:broker --log-level INFO --tasks-pattern "app/tasks/*.py"

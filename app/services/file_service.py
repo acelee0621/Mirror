@@ -11,6 +11,7 @@ from app.repository.file_metadata import file_metadata_repository
 from app.schemas.file_metadata import FileMetadataCreate
 from app.models.file_metadata import FileMetadata
 from app.core.exceptions import AlreadyExistsException, NotFoundException
+from app.tasks.tasks import process_file_task
 
 
 class FileService:
@@ -89,9 +90,13 @@ class FileService:
         # 5. 调用仓库层，创建数据库记录
         db_file_meta = await self.repository.create(session, obj_in=file_meta_in)
 
+        # 6. 创建后台处理任务
+        logger.info(f"准备为文件 ID {db_file_meta.id} 创建后台处理任务...")
+        task = await process_file_task.kiq(file_id=db_file_meta.id)
+        logger.success(f"后台任务 {task.task_id} 已成功创建！")
+
         return db_file_meta
-    
-    
+
     async def get_files_by_account(
         self, session: AsyncSession, *, account_id: int, skip: int = 0, limit: int = 100
     ) -> list[FileMetadata]:
@@ -100,7 +105,9 @@ class FileService:
             session, account_id=account_id, skip=skip, limit=limit
         )
 
-    async def get_file_by_id(self, session: AsyncSession, *, file_id: int) -> FileMetadata:
+    async def get_file_by_id(
+        self, session: AsyncSession, *, file_id: int
+    ) -> FileMetadata:
         """通过ID获取单个文件元数据"""
         file_meta = await self.repository.get(session, id=file_id)
         if not file_meta:
@@ -111,7 +118,7 @@ class FileService:
         """删除一个文件，包括数据库记录和物理文件"""
         # 1. 先获取元数据，确保文件存在，并拿到物理路径
         file_to_delete = await self.get_file_by_id(session, file_id=file_id)
-        
+
         # 2. 删除物理文件
         try:
             file_path = Path(file_to_delete.file_path)
