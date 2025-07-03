@@ -16,24 +16,29 @@ _db_initialized = False
 _engine: Optional[AsyncEngine] = None
 _SessionLocal: Optional[async_sessionmaker[AsyncSession]] = None
 
+
 def get_engine() -> AsyncEngine:
     if _engine is None:
         raise RuntimeError("数据库引擎未初始化. 请先调用 setup_database_connection")
     return _engine
+
 
 def get_session_local() -> async_sessionmaker[AsyncSession]:
     if _SessionLocal is None:
         raise RuntimeError("会话工厂未初始化. 请先调用 setup_database_connection")
     return _SessionLocal
 
+
 POSTGRES_DATABASE_URL = (
     f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
     f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
 )
 
+
 # --- 基类 ---
 class Base(DeclarativeBase):
     pass
+
 
 # --- 2. 通用的数据库初始化和关闭函数 ---
 # 这些函数现在是通用的，可以在任何需要初始化数据库的地方调用。
@@ -46,7 +51,7 @@ async def setup_database_connection():
     global _engine, _SessionLocal, _db_initialized
     if _db_initialized:
         logger.info("数据库已初始化，跳过重复设置。")
-        return    
+        return
 
     _engine = create_async_engine(
         POSTGRES_DATABASE_URL,
@@ -63,6 +68,7 @@ async def setup_database_connection():
     _db_initialized = True
     logger.info("数据库引擎和会话工厂已创建。")
 
+
 async def shutdown_database_connection():
     """
     关闭全局的数据库引擎连接池。
@@ -71,8 +77,8 @@ async def shutdown_database_connection():
     global _engine, _SessionLocal, _db_initialized
     if _engine:
         await _engine.dispose()
-        _engine = None # 清理引用
-        _SessionLocal = None # 清理引用
+        _engine = None  # 清理引用
+        _SessionLocal = None  # 清理引用
         _db_initialized = False
         logger.info("数据库引擎连接池已关闭。")
 
@@ -86,10 +92,13 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     if _SessionLocal is None:
         # 这个错误通常不应该在正确配置的生产环境中出现
         # 它表明 setup_database_connection 未在应用或worker启动时调用
-        raise Exception("数据库未初始化。请检查 FastAPI 的 lifespan 或 TaskIQ worker 的启动配置。")
+        raise Exception(
+            "数据库未初始化。请检查 FastAPI 的 lifespan 或 TaskIQ worker 的启动配置。"
+        )
 
     async with _SessionLocal() as session:
         yield session
+
 
 # TaskIQ 专用的快捷依赖项
 get_db_for_taskiq = TaskiqDepends(get_db)
@@ -101,13 +110,3 @@ async def create_db_and_tables():
         raise Exception("无法创建表，因为数据库引擎未初始化。")
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
-
-# 用于临时使用的数据库会话
-async def get_session() -> AsyncSession:
-    """
-    获取一个数据库会话，需要手动关闭
-    """
-    if _SessionLocal is None:
-        raise RuntimeError("Database not initialized. Call setup_database_connection first.")
-    return _SessionLocal()

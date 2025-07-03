@@ -1,3 +1,4 @@
+# app/models/file_metadata.py
 import datetime
 from sqlalchemy import Integer, String, ForeignKey, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship

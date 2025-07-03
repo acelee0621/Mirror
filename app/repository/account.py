@@ -69,7 +69,7 @@ class AccountRepository(BaseRepository[Account, AccountCreate, AccountUpdate]):
         statement = (
             select(self.model)
             .where(self.model.id == id)
-            .options(selectinload(self.model.files))  # <--- 核心：在这里指定预加载
+            .options(selectinload(self.model.files))
         )
         result = await session.scalars(statement)
         return result.one_or_none()

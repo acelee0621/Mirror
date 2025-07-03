@@ -1,3 +1,4 @@
+# app/schemas/
 from pydantic import BaseModel, ConfigDict
 
 

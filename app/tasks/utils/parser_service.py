@@ -125,7 +125,7 @@ class ParserService:
 
     def _determine_is_cash(self, row: pd.Series) -> bool:
         """
-        一个更智能的函数，用于判断单笔交易是否为现金交易。（V2版：健壮性修复）
+        用于判断单笔交易是否为现金交易。
         它会检查多个列来寻找线索，并能正确处理None值。
         """
 

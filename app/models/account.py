@@ -1,3 +1,4 @@
+# app/models/account.py
 from sqlalchemy import Integer, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
