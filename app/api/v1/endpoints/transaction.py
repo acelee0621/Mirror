@@ -22,7 +22,7 @@ async def get_transactions_for_account(
     limit: int = 100,
 ):
     """
-    获取指定银行账户下所有交易记录的列表，按交易日期降序排列。
+    获取指定银行账户下所有交易记录的列表，按交易时间升序排序。
     """
     return await service.get_transactions_for_account(
         session, account_id=account_id, skip=skip, limit=limit

@@ -22,8 +22,7 @@ class TransactionService:
         self, session: AsyncSession, transaction_id: int
     ) -> Transaction:
         """通过ID获取单笔交易"""
-        # --- 修正点 ---
-        # 直接调用仓库层中更专业的、语义化的方法
+        
         transaction = await self.repository.get_with_details(
             session, transaction_id=transaction_id
         )

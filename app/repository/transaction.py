@@ -35,7 +35,7 @@ class TransactionRepository(
             .options(
                 selectinload(self.model.account), selectinload(self.model.counterparty)
             )
-            .order_by(self.model.transaction_date.desc())
+            .order_by(self.model.transaction_date.asc())
             .offset(skip)
             .limit(limit)
         )
@@ -55,7 +55,7 @@ class TransactionRepository(
         if not transactions_data:
             return
 
-        # --- 修正点：分块处理 ---
+        # --- 分块处理 ---
         for i in range(0, len(transactions_data), chunk_size):
             chunk = transactions_data[i : i + chunk_size]
             if not chunk:
