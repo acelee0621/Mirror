@@ -18,3 +18,7 @@ dependencies = [
     "taskiq-aio-pika>=0.4.2",
     "taskiq-redis>=1.0.9",
 ]
+
+
+[tool.uv.run.fastapi]
+cmd = "uvicorn app.main:app --reload"

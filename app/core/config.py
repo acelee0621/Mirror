@@ -33,6 +33,9 @@ class Settings(BaseSettings):
 
     # 上传文件路径配置
     LOCAL_STORAGE_PATH: str = "uploads/"
+    
+    # 前端URL配置
+    API_BASE_URL: str = "http://127.0.0.1:8000/api/v1"
 
     
 

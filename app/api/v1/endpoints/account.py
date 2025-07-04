@@ -8,7 +8,7 @@ from app.schemas.account import AccountCreate, AccountUpdate, AccountPublicWithO
 from app.services.transaction_service import TransactionService
 from app.schemas.transaction import TransactionPublic
 
-router = APIRouter(tags=["Accounts"])
+router = APIRouter()
 
 
 @router.post(
@@ -33,6 +33,7 @@ async def create_new_account(
     "/accounts/{account_id}",
     response_model=AccountPublicWithOwner,
     summary="获取指定ID的账户",
+    tags=["Accounts"],
 )
 async def get_account_by_id(
     account_id: int,
@@ -46,6 +47,7 @@ async def get_account_by_id(
     "/accounts/{account_id}",
     response_model=AccountPublicWithOwner,
     summary="更新账户信息",
+    tags=["Accounts"],
 )
 async def update_account_info(
     account_id: int,
@@ -59,7 +61,10 @@ async def update_account_info(
 
 
 @router.delete(
-    "/accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT, summary="删除账户"
+    "/accounts/{account_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除账户",
+    tags=["Accounts"],
 )
 async def delete_account_by_id(
     account_id: int,
@@ -74,6 +79,7 @@ async def delete_account_by_id(
     "/accounts/{account_id}/transactions",
     response_model=list[TransactionPublic],
     summary="获取指定账户下的所有交易记录",
+    tags=["Accounts"],
 )
 async def get_transactions_for_account(
     account_id: int,

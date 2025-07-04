@@ -1,0 +1,11 @@
+__pycache__/
+.venv/
+tests/
+uploads/
+
+.coverage
+.git
+.gitignore
+.python-version
+README.md
+LICENSE

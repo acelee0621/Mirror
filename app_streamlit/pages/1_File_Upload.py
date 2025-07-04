@@ -1,10 +1,12 @@
+import os
 import streamlit as st
 import requests
 import pandas as pd
 from navigation import make_sidebar
 
+
 # --- 配置 ---
-API_BASE_URL = "http://127.0.0.1:8000/api/v1"
+API_BASE_URL = os.getenv("STREAMLIT_API_BASE_URL", "http://127.0.0.1:8000/api/v1")
 
 st.set_page_config(page_title="文件上传 - 明镜 D-Sensor", page_icon="📄", layout="wide")
 

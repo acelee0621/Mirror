@@ -1,0 +1,147 @@
+# docker-compose.yaml
+
+
+# 定义我们整个应用栈的名称
+name: 'mirror-project'
+
+services:
+  # 1. PostgreSQL 数据库服务
+  postgresql:
+    image: bitnami/postgresql:latest
+    # ports:
+    #   - "5432:5432"
+    environment:
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=postgres
+      - POSTGRESQL_DATABASE=mirror
+    volumes:
+      - postgresql_data:/bitnami/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # 2. RabbitMQ 消息队列服务
+  rabbitmq:
+    image: bitnami/rabbitmq:latest
+    # ports:
+    #   - "5672:5672"   # AMQP 协议端口
+    #   - "15672:15672" # 管理后台UI端口
+    environment:
+      - RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS=true
+    volumes:
+      - rabbitmq_data:/bitnami/rabbitmq/mnesia
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # 3. Redis 结果后端服务
+  redis:
+    image: bitnami/redis:latest
+    # ports:
+    #   - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - redis_data:/bitnami/redis/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 4. FastAPI 后端应用服务
+  app:
+    image: mirror:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: never
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    volumes:
+      - uploads_data:/app/uploads # 挂载上传文件目录
+    ports:
+      - "8000:8000"
+    environment:
+      - API_BASE_URL=http://localhost:8000/api/v1    
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mirror
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=user
+      - RABBITMQ_PASSWORD=bitnami
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOCAL_STORAGE_PATH=/app/uploads # 确保容器内路径正确
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # 5. Taskiq Worker 后台任务服务
+  worker:
+    image: mirror:latest
+    pull_policy: never
+    command: taskiq worker app.core.taskiq_app:broker --tasks-pattern "app/tasks/*.py"
+    volumes:
+      - uploads_data:/app/uploads # 挂载上传文件目录，与app服务共享
+    environment:      
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mirror
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=user
+      - RABBITMQ_PASSWORD=bitnami
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOCAL_STORAGE_PATH=/app/uploads
+    depends_on:
+      app:
+        condition: service_started # 依赖app服务先启动
+      postgresql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+  # 6. Streamlit 前端服务
+  frontend:
+    image: mirror:latest
+    pull_policy: never      
+    command: streamlit run app_streamlit/Home.py --server.port 8501 --server.address 0.0.0.0
+    volumes:
+      - ./app_streamlit:/app/app_streamlit # 将前端代码挂载进去，方便热重载开发
+    ports:
+      - "8501:8501"
+    environment:
+      # Streamlit 不需要直接连接数据库等，它通过API与后端通信
+      # 但如果需要，也可以在这里添加环境变量
+      - STREAMLIT_API_BASE_URL=http://app:8000/api/v1
+    depends_on:
+      app:
+        condition: service_started
+
+# 定义具名卷，用于持久化存储数据
+volumes:
+  postgresql_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data: # 用于在 app 和 worker 间共享上传的文件
+    driver: local
