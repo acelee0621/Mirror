@@ -162,7 +162,7 @@ if not st.session_state.opponent_summary_df.empty:
                 title="对手方",
             ),
             color=alt.condition(
-                alt.datum.net_flow > 0, alt.value("green"), alt.value("red")
+                alt.datum.net_flow > 0, alt.value("#2E8B57"), alt.value("#D26466")
             ),
             tooltip=[
                 "name",

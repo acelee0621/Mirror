@@ -195,43 +195,94 @@ if not st.session_state.global_transactions_df.empty:
     kpi5.metric(label="🏦 全局期末余额", value=f"¥ {total_final_balance:,.2f}")
 
     st.markdown("#### 📈 可视化分析")
-    # --- 【核心修改点 2】: 实现Top 5收支对手方合并图表 (逻辑同上) ---
-    st.write("**Top 5 收入 & 支出对手方 (全局)**")
-    top_5_expense_names = (
-        filtered_df[filtered_df.type_cn == "支出"]
-        .groupby("counterparty_name")["amount"]
-        .sum()
-        .abs()
-        .nlargest(5)
-        .index
-    )
-    top_5_income_names = (
-        filtered_df[filtered_df.type_cn == "收入"]
-        .groupby("counterparty_name")["amount"]
-        .sum()
-        .nlargest(5)
-        .index
-    )
-    top_opponents = top_5_expense_names.union(top_5_income_names)
-    chart_df = filtered_df[filtered_df.counterparty_name.isin(top_opponents)]
-    chart_data = (
-        chart_df.groupby(["counterparty_name", "type_cn"])["amount"].sum().reset_index()
-    )
-    chart = (
-        alt.Chart(chart_data)
-        .mark_bar()
-        .encode(
-            x=alt.X("amount:Q", title="金额 (元)"),
-            y=alt.Y("counterparty_name:N", sort="-x", title="对手方"),
-            color=alt.Color(
-                "type_cn:N",
-                scale=alt.Scale(domain=["收入", "支出"], range=["#2ca02c", "#d62728"]),
-                title="类型",
-            ),
-            tooltip=["counterparty_name", "type_cn", "amount"],
+
+    # 创建一个 2 列的布局，左边宽一点，右边窄一点
+    chart_col1, chart_col2 = st.columns([2, 1])
+
+    with chart_col1:
+        st.write("**Top 收支对手方**")
+
+        # 准备龙卷风图的数据
+        top_5_expense_names = (
+            filtered_df[filtered_df.type_cn == "支出"]
+            .groupby("counterparty_name")["amount"]
+            .sum()
+            .abs()
+            .nlargest(5)
+            .index
         )
-    )
-    st.altair_chart(chart, use_container_width=True)
+        top_5_income_names = (
+            filtered_df[filtered_df.type_cn == "收入"]
+            .groupby("counterparty_name")["amount"]
+            .sum()
+            .nlargest(5)
+            .index
+        )
+        top_opponents = top_5_expense_names.union(top_5_income_names)
+
+        chart_df = filtered_df[filtered_df.counterparty_name.isin(top_opponents)]
+        chart_data = (
+            chart_df.groupby(["counterparty_name", "type_cn"])["amount"]
+            .sum()
+            .reset_index()
+        )
+
+        # 创建龙卷风图
+        tornado_chart = (
+            alt.Chart(chart_data)
+            .mark_bar()
+            .encode(
+                x=alt.X("amount:Q", title="金额 (元)"),
+                y=alt.Y("counterparty_name:N", sort="-x", title="对手方"),
+                color=alt.Color(
+                    "type_cn:N",
+                    scale=alt.Scale(
+                        domain=["收入", "支出"], range=["#2E8B57", "#D26466"]
+                    ),
+                    legend=None,  # 不显示图例
+                ),
+                tooltip=["counterparty_name", "type_cn", "amount"],
+            )
+            .properties(
+                # 我们在这里可以给图表一个固定的高度，让它和饼图更协调
+                height=300
+            )
+        )
+        st.altair_chart(tornado_chart, use_container_width=True)
+
+    with chart_col2:
+        st.write("**总收支构成**")
+
+        # --- 【核心新增代码：饼图】 ---
+        # 1. 准备饼图的数据
+        type_summary = (
+            filtered_df.groupby("type_cn")["amount"].sum().abs().reset_index()
+        )
+
+        # 2. 创建饼图（甜甜圈图）
+        donut_chart = (
+            alt.Chart(type_summary)
+            .mark_arc(innerRadius=50, outerRadius=120)
+            .encode(
+                # 角度由金额决定
+                theta=alt.Theta(field="amount", type="quantitative"),
+                # 颜色由类型决定，并使用和龙卷风图一致的配色
+                color=alt.Color(
+                    field="type_cn",
+                    type="nominal",
+                    scale=alt.Scale(
+                        domain=["收入", "支出"], range=["#2E8B57", "#D26466"]
+                    ),
+                    legend=None,  # 同样不显示图例
+                ),
+                tooltip=["type_cn", "amount"],
+            )
+            .properties(
+                # 让饼图和龙卷风图高度一致，更美观
+                height=300
+            )
+        )
+        st.altair_chart(donut_chart, use_container_width=True)
 
     st.markdown("#### 📋 交易明细 (全局)")
     # ... 表格部分代码不变 ...
