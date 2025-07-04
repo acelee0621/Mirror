@@ -23,6 +23,9 @@ COPY . .
 # 使用同一个轻量的 Python 镜像
 FROM python:3.13.5-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client curl \
+    && rm -rf /var/lib/apt/lists/*
+    
 # 设置工作目录
 WORKDIR /app
 
@@ -34,6 +37,8 @@ RUN chown -R appuser:appuser /app
 # 从构建阶段复制已经包含代码和虚拟环境的整个 /app 目录
 # 这样做非常高效，避免了在运行阶段再次安装依赖
 COPY --from=builder --chown=appuser:appuser /app /app
+
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
 
 # 切换到非特权用户
 USER appuser

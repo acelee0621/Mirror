@@ -179,7 +179,7 @@ else:
                                     files=files,
                                     data=data,
                                 )
-                                if response.status_code == 201:
+                                if response.status_code in [200, 201]:
                                     st.success("🎉 文件上传成功！后台正在异步处理中...")
                                     refresh_file_history(
                                         st.session_state.selected_account_id

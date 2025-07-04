@@ -10,13 +10,8 @@ from app.core.database import (
     shutdown_database_connection,
 )
 from app.core.taskiq_app import broker
-from app.utils.migrations import run_migrations
 from app.api.v1 import health
 from app.api.v1.endpoints import person, account, transaction, counterparty, file_upload
-
-
-# Run migrations on startup
-run_migrations()
 
 
 @asynccontextmanager

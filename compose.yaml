@@ -17,7 +17,7 @@ services:
     volumes:
       - postgresql_data:/bitnami/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready", "-U", "postgres"]
+      test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 10s
       timeout: 10s
       retries: 10
@@ -27,8 +27,8 @@ services:
   rabbitmq:
     image: bitnami/rabbitmq:latest
     # ports:
-    #   - "5672:5672"   # AMQP 协议端口
-    #   - "15672:15672" # 管理后台UI端口
+    #   - "5672:5672"   
+    #   - "15672:15672" 
     environment:
       - RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS=true
     volumes:
@@ -61,13 +61,12 @@ services:
       context: .
       dockerfile: Dockerfile
     pull_policy: never
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    command: ./scripts/start_api.sh
     volumes:
       - uploads_data:/app/uploads # 挂载上传文件目录
     ports:
       - "8000:8000"
-    environment:
-      - API_BASE_URL=http://localhost:8000/api/v1    
+    environment:       
       - POSTGRES_HOST=postgresql
       - POSTGRES_PORT=5432
       - POSTGRES_USER=postgres
@@ -81,6 +80,8 @@ services:
       - REDIS_PORT=6379
       - LOCAL_STORAGE_PATH=/app/uploads # 确保容器内路径正确
     depends_on:
+      alembic:
+        condition: service_completed_successfully
       postgresql:
         condition: service_healthy
       rabbitmq:
@@ -92,7 +93,7 @@ services:
   worker:
     image: mirror:latest
     pull_policy: never
-    command: taskiq worker app.core.taskiq_app:broker --tasks-pattern "app/tasks/*.py"
+    command: ./scripts/start_worker.sh
     volumes:
       - uploads_data:/app/uploads # 挂载上传文件目录，与app服务共享
     environment:      
@@ -122,7 +123,7 @@ services:
   frontend:
     image: mirror:latest
     pull_policy: never      
-    command: streamlit run app_streamlit/Home.py --server.port 8501 --server.address 0.0.0.0
+    command: ./scripts/start_streamlit.sh
     volumes:
       - ./app_streamlit:/app/app_streamlit # 将前端代码挂载进去，方便热重载开发
     ports:
@@ -134,6 +135,22 @@ services:
     depends_on:
       app:
         condition: service_started
+  
+  # 7. Alembic 数据库迁移服务
+  alembic:
+    image: mirror:latest
+    pull_policy: never
+    command: ./scripts/run_migrations.sh
+    environment:
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mirror
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: on-failure:3
 
 # 定义具名卷，用于持久化存储数据
 volumes:
