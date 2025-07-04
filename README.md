@@ -126,9 +126,9 @@
 
 ### Docker部署
 
-    ```bash
-    docker compose up -d
-    ```
+```bash
+docker compose up -d
+```
 
 ## 🗺️ 未来路线图 (Roadmap)
 
