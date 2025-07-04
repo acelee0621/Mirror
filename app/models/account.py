@@ -1,10 +1,11 @@
 # app/models/account.py
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Integer, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.person import Person

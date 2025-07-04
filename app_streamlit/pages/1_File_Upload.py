@@ -3,24 +3,26 @@ import requests
 import pandas as pd
 from navigation import make_sidebar
 
-
 # --- 配置 ---
 API_BASE_URL = "http://127.0.0.1:8000/api/v1"
 
 st.set_page_config(page_title="文件上传 - 明镜 D-Sensor", page_icon="📄", layout="wide")
 
-make_sidebar()  # 一定要在set_page_config之后调用
+make_sidebar()
 
 st.title("📄 上传银行流水文件")
 st.markdown("请选择用户和对应的银行账户，然后上传您的Excel或CSV流水文件。")
 
-# --- 会话状态初始化 ---
+# --- 会话状态初始化 (V2版：增加 history_loaded_account_id) ---
 if "selected_person_id" not in st.session_state:
     st.session_state.selected_person_id = None
 if "selected_account_id" not in st.session_state:
     st.session_state.selected_account_id = None
 if "file_history" not in st.session_state:
     st.session_state.file_history = []
+# 新增一个状态，用于追踪当前已加载文件历史的账户ID
+if "history_loaded_account_id" not in st.session_state:
+    st.session_state.history_loaded_account_id = None
 
 
 # --- API 调用函数 (保持不变) ---
@@ -91,14 +93,13 @@ if not persons:
 else:
     person_df = pd.DataFrame(persons)
 
-    # --- 【核心修复点 1】---
     person_index = None
     if st.session_state.selected_person_id is not None:
         matching_person = person_df[
             person_df["id"] == st.session_state.selected_person_id
         ]
         if not matching_person.empty:
-            person_index = int(matching_person.index[0])  # 强制转换为 int
+            person_index = int(matching_person.index[0])
 
     selected_person_name = st.selectbox(
         "第一步：选择用户",
@@ -118,14 +119,13 @@ else:
         else:
             account_df = pd.DataFrame(accounts)
 
-            # --- 【核心修复点 2】---
             account_index = None
             if st.session_state.selected_account_id is not None:
                 matching_account = account_df[
                     account_df["id"] == st.session_state.selected_account_id
                 ]
                 if not matching_account.empty:
-                    account_index = int(matching_account.index[0])  # 强制转换为 int
+                    account_index = int(matching_account.index[0])
 
             selected_account_name = st.selectbox(
                 "第二步：选择银行账户",
@@ -138,6 +138,18 @@ else:
                 st.session_state.selected_account_id = account_df[
                     account_df["account_name"] == selected_account_name
                 ]["id"].iloc[0]
+
+                # --- 【核心修复点】: 响应式地加载文件历史 ---
+                if (
+                    st.session_state.selected_account_id
+                    != st.session_state.history_loaded_account_id
+                ):
+                    with st.spinner("正在获取文件历史..."):
+                        refresh_file_history(st.session_state.selected_account_id)
+                        st.session_state.history_loaded_account_id = (
+                            st.session_state.selected_account_id
+                        )
+                        st.rerun()
 
                 # ... 后续的表单和文件历史代码保持不变 ...
                 with st.form("upload_form", clear_on_submit=True):
@@ -187,12 +199,6 @@ else:
                 if st.button("🔄 手动刷新"):
                     refresh_file_history(st.session_state.selected_account_id)
 
-                if (
-                    st.session_state.selected_account_id
-                    and not st.session_state.file_history
-                ):
-                    refresh_file_history(st.session_state.selected_account_id)
-
                 if st.session_state.file_history:
                     header_cols = st.columns([3, 2, 1, 2, 2, 1])
                     headers = [
@@ -217,7 +223,6 @@ else:
                             )
                         )
                         row_cols[4].text(file["error_message"] or "无")
-
                         if row_cols[5].button(
                             "🗑️ 删除",
                             key=f"del_{file['id']}",
@@ -228,3 +233,7 @@ else:
                             )
                 else:
                     st.info("该账户还没有任何文件上传记录。")
+            else:
+                # 如果用户清空了账户选择，我们也清空文件历史
+                st.session_state.file_history = []
+                st.session_state.history_loaded_account_id = None

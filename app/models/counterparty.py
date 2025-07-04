@@ -1,8 +1,13 @@
 # app/models/counterparty.py
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+if TYPE_CHECKING:    
+    from app.models.transaction import Transaction
 
 
 class Counterparty(Base):
@@ -21,4 +26,9 @@ class Counterparty(Base):
     )
     counterparty_type: Mapped[str] = mapped_column(
         String, comment="对手类型，如“PERSON”或“MERCHANT”"
+    )
+    
+    # --- ORM关系关联 ---
+    transactions: Mapped[list["Transaction"]] = relationship(
+        back_populates="counterparty"
     )

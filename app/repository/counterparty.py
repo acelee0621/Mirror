@@ -1,11 +1,15 @@
 # app/repository/counterparty.py
+from typing import Any
+
 from loguru import logger
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.repository.base import BaseRepository
 from app.models.counterparty import Counterparty
+from app.models.transaction import Transaction
+from app.models.account import Account
 from app.models.enums import CounterpartyType
 from app.schemas.counterparty import CounterpartyCreate, CounterpartyUpdate
 
@@ -56,7 +60,7 @@ class CounterpartyRepository(
                 )
                 existing_counterparty.counterparty_type = counterparty_type
                 session.add(existing_counterparty)
-                await session.commit()
+                await session.flush()
                 await session.refresh(existing_counterparty)
             return existing_counterparty
 
@@ -67,7 +71,7 @@ class CounterpartyRepository(
         )
         session.add(new_counterparty)
         try:
-            await session.commit()
+            await session.flush()
             await session.refresh(new_counterparty)
             return new_counterparty
         except IntegrityError:
@@ -76,6 +80,75 @@ class CounterpartyRepository(
             # 再次查询一次，返回已存在的记录
             result = await session.scalars(statement)
             return result.one()
+
+    async def get_summary_by_person_id_grouped_by_name(
+        self, session: AsyncSession, *, person_id: int
+    ) -> list[dict[str, Any]]:
+        """
+        获取一个用户所有对手方的资金往来汇总统计，按对手方名称进行分组。
+        """
+        income_case = case(
+            (Transaction.transaction_type == "CREDIT", Transaction.amount), else_=0
+        )
+        expense_case = case(
+            (Transaction.transaction_type == "DEBIT", Transaction.amount), else_=0
+        )
+
+        statement = (
+            select(
+                # 我们只选择需要聚合的字段
+                self.model.name,
+                func.sum(income_case).label("total_income"),
+                func.sum(expense_case).label("total_expense"),
+                func.count(Transaction.id).label("transaction_count"),
+            )
+            .join(Transaction, self.model.id == Transaction.counterparty_id)
+            .join(Account, Transaction.account_id == Account.id)
+            .where(Account.owner_id == person_id)
+            .group_by(self.model.name)  # <-- 核心思路：按名称分组
+        )
+
+        result = await session.execute(statement)
+        return [row._asdict() for row in result.all()]
+
+    # 暂时弃用，但仍保留代码，以备不时之需
+    async def get_summary_by_person_id(
+        self, session: AsyncSession, *, person_id: int
+    ) -> list[dict[str, Any]]:
+        """
+        获取一个用户所有对手方的资金往来汇总统计。
+        """
+        # 使用 case 表达式来分别计算收入和支出
+        income_case = case(
+            (Transaction.transaction_type == "CREDIT", Transaction.amount), else_=0
+        )
+        expense_case = case(
+            (Transaction.transaction_type == "DEBIT", Transaction.amount), else_=0
+        )
+
+        # 构建聚合查询
+        statement = (
+            select(
+                self.model.id,
+                self.model.name,
+                self.model.account_number,
+                self.model.counterparty_type,
+                func.sum(income_case).label("total_income"),
+                func.sum(expense_case).label("total_expense"),
+                func.count(Transaction.id).label("transaction_count"),
+            )
+            .join(Transaction, self.model.id == Transaction.counterparty_id)
+            .join(Account, Transaction.account_id == Account.id)
+            .where(Account.owner_id == person_id)
+            .group_by(self.model.id)
+            .order_by(
+                func.sum(func.abs(Transaction.amount)).desc()
+            )  # 按总交易绝对值降序
+        )
+
+        result = await session.execute(statement)
+        # 将结果转换为字典列表，方便上层使用
+        return [row._asdict() for row in result.all()]
 
 
 counterparty_repository = CounterpartyRepository(Counterparty)

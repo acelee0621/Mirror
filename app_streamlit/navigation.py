@@ -30,7 +30,11 @@ def make_sidebar():
 
         st.page_link("pages/1_File_Upload.py", label="文件上传", icon="📄")
 
-        st.page_link("pages/2_Transaction_Dashboard.py", label="交易看板", icon="📊")
+        st.page_link("pages/2_Account_Details.py", label="账户明细", icon="📊")
+
+        st.page_link("pages/3_Global_Dashboard.py", label="个人全景视图", icon="🌍")
+
+        st.page_link("pages/4_Counterparty_Analysis.py", label="对手方网络", icon="🤝")
 
         # 如果未来有更多页面，在这里继续添加即可
         # st.page_link("pages/3_AI_Analysis.py", label="AI智能分析", icon="🤖")

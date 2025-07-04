@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.account_service import AccountService
 from app.schemas.account import AccountCreate, AccountUpdate, AccountPublicWithOwner
+from app.services.transaction_service import TransactionService
+from app.schemas.transaction import TransactionPublic
 
 router = APIRouter(tags=["Accounts"])
 
@@ -14,6 +16,7 @@ router = APIRouter(tags=["Accounts"])
     response_model=AccountPublicWithOwner,
     status_code=status.HTTP_201_CREATED,
     summary="为指定用户创建新账户",
+    tags=["Persons"],
 )
 async def create_new_account(
     person_id: int,
@@ -65,3 +68,23 @@ async def delete_account_by_id(
 ):
     await service.delete_account(session, account_id=account_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/accounts/{account_id}/transactions",
+    response_model=list[TransactionPublic],
+    summary="获取指定账户下的所有交易记录",
+)
+async def get_transactions_for_account(
+    account_id: int,
+    session: AsyncSession = Depends(get_db),
+    service: TransactionService = Depends(),
+    skip: int = 0,
+    limit: int = 100,
+):
+    """
+    获取指定银行账户下所有交易记录的列表，按交易时间升序排序。
+    """
+    return await service.get_transactions_for_account(
+        session, account_id=account_id, skip=skip, limit=limit
+    )

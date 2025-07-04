@@ -2,11 +2,13 @@
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, subqueryload
 from typing import Any
 
 from app.repository.base import BaseRepository
 from app.models.transaction import Transaction
+from app.models.person import Person
+from app.models.account import Account
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 
@@ -37,6 +39,30 @@ class TransactionRepository(
             )
             .order_by(self.model.transaction_date.asc())
             .offset(skip)
+            .limit(limit)
+        )
+        result = await session.scalars(statement)
+        return list(result.all())
+
+    async def get_multi_by_person_id(
+        self, session: AsyncSession, *, person_id: int, skip: int = 0, limit: int = 100
+    ) -> list[Transaction]:
+        """
+        获取一个用户所有账户下的全部交易记录。
+        (V2: 使用直接查询，更高效且避免了关联代理的复杂性)
+        """
+        # 直接从 Transaction 表开始查询，通过 JOIN 关联到 Account 来实现过滤
+        statement = (
+            select(self.model)
+            .join(Account, self.model.account_id == Account.id)
+            .where(Account.owner_id == person_id)
+            .options(
+                # 依然使用预加载来避免 N+1 问题
+                selectinload(self.model.account),
+                selectinload(self.model.counterparty),
+            )
+            .order_by(self.model.transaction_date.asc())  # 在数据库层面完成排序
+            .offset(skip)  # 在数据库层面完成分页
             .limit(limit)
         )
         result = await session.scalars(statement)

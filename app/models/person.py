@@ -1,12 +1,15 @@
 # app/models/person.py
+from typing import TYPE_CHECKING, cast
+
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from sqlalchemy.ext.associationproxy import association_proxy, AssociationProxy
 from app.core.database import Base
-from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from app.models.account import Account
+    from app.models.transaction import Transaction
 
 
 class Person(Base):
@@ -24,4 +27,11 @@ class Person(Base):
     # Relationship to Account
     accounts: Mapped[list["Account"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
+    )
+
+    # --- 【核心新增代码】 ---
+    # 3. 创建一个名为 transactions 的关联代理
+    # 它能“穿透” accounts 关系，直接访问到所有账户下的所有交易
+    transactions: AssociationProxy[list["Transaction"]] = cast(
+        AssociationProxy, association_proxy("accounts", "transactions")
     )

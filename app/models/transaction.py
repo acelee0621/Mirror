@@ -74,4 +74,4 @@ class Transaction(Base):
 
     # --- ORM 关系属性 ---
     account: Mapped["Account"] = relationship(back_populates="transactions")
-    counterparty: Mapped["Counterparty"] = relationship()
+    counterparty: Mapped["Counterparty"] = relationship(back_populates="transactions")
