@@ -76,8 +76,7 @@
 
 1.  **克隆项目**
     ```bash
-    git clone [https://github.com/acelee0621/Mirror.git](https://github.com/acelee0621/Mirror.git)
-    cd Mirror
+    git clone https://github.com/acelee0621/Mirror.git
     ```
 
 2.  **创建并激活虚拟环境**
