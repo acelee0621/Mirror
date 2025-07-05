@@ -22,9 +22,6 @@ COPY . .
 # -------------- 运行阶段 (Runner Stage) --------------
 # 使用同一个轻量的 Python 镜像
 FROM python:3.13.5-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client curl \
-    && rm -rf /var/lib/apt/lists/*
     
 # 设置工作目录
 WORKDIR /app

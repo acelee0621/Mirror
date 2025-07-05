@@ -59,7 +59,7 @@ class ParserService:
             "管理",
             "财付通",
             "支付宝",
-            "银联",            
+            "银联",
             "唯品会",
             "钱袋宝",
             "微众",
@@ -71,7 +71,7 @@ class ParserService:
             "服饰",
             "股份",
             "商业",
-            "便购",            
+            "便购",
             "餐饮",
         ]
 
@@ -275,6 +275,7 @@ class ParserService:
             cleaned_df["transaction_type"] = "UNKNOWN"
 
         # 步骤 5: 其余字段清洗
+        cleaned_df["currency"] = cleaned_df["currency"].fillna("CNY")
         cleaned_df["balance_after_txn"] = pd.to_numeric(
             cleaned_df["balance_after_txn"], errors="coerce"
         )
