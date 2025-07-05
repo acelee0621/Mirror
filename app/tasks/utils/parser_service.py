@@ -219,11 +219,22 @@ class ParserService:
                 cleaned_df["transaction_date"] = pd.to_datetime(
                     full_datetime_str, errors="coerce"
                 )
-            # 模式二：日期时间合一 (工行)
+            # 模式二：日期时间合一 (工行、交行等)
             else:
-                logger.info("正在使用“日期时间合一”模式解析时间...")
+                logger.info("正在使用“日期时间合一”模式解析时间（兼容多种格式）...")
+                # --- 对日期字符串进行预处理 ---
+                # 1. 移除所有可能的冒号、空格，并去除首尾空白
+                date_series = (
+                    cleaned_df["transaction_date_str"]
+                    .str.replace(":", "", regex=False)
+                    .str.replace(" ", "", regex=False)
+                    .str.strip()
+                )
+                # 2. 对齐长度：对于缺少秒的格式 (如 YYYYMMDDHHMM)，在末尾补 '00'，使其统一为14位
+                date_series_padded = date_series.str.ljust(14, "0")
+                # 3. 现在所有格式都统一了，再使用严格格式进行解析
                 cleaned_df["transaction_date"] = pd.to_datetime(
-                    cleaned_df["transaction_date_str"],
+                    date_series_padded,
                     format="%Y%m%d%H%M%S",
                     errors="coerce",
                 )

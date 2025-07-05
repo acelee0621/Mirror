@@ -80,8 +80,8 @@ services:
       - REDIS_PORT=6379
       - LOCAL_STORAGE_PATH=/app/uploads # 确保容器内路径正确
     depends_on:
-      alembic:
-        condition: service_completed_successfully
+      # alembic:
+      #   condition: service_completed_successfully
       postgresql:
         condition: service_healthy
       rabbitmq:
@@ -137,20 +137,20 @@ services:
         condition: service_started
   
   # 7. Alembic 数据库迁移服务
-  alembic:
-    image: mirror:latest
-    pull_policy: never
-    command: ./scripts/run_migrations.sh
-    environment:
-      - POSTGRES_HOST=postgresql
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=mirror
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    restart: on-failure:3
+  # alembic:
+  #   image: mirror:latest
+  #   pull_policy: never
+  #   command: ./scripts/run_migrations.sh
+  #   environment:
+  #     - POSTGRES_HOST=postgresql
+  #     - POSTGRES_PORT=5432
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=mirror
+  #   depends_on:
+  #     postgresql:
+  #       condition: service_healthy
+  #   restart: on-failure:3
 
 # 定义具名卷，用于持久化存储数据
 volumes:

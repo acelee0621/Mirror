@@ -9,3 +9,7 @@ uploads/
 .python-version
 README.md
 LICENSE
+
+*.pyc
+*.pyo
+*.log
