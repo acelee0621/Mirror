@@ -81,13 +81,12 @@
 
 2.  **创建并激活虚拟环境**
     ```bash
-    uv venv
-    source .venv/bin/activate
+    uv venv    
     ```
 
 3.  **安装依赖**
     ```bash
-    uv pip install -r requirements.txt
+    uv sync
     ```
 
 4.  **配置环境变量**
@@ -106,21 +105,21 @@
 
 1.  **启动FastAPI后端服务**
     ```bash
-    uvicorn app.main:app --reload
+    uv run uvicorn app.main:app --reload
     ```
     API将在 `http://127.0.0.1:8000` 运行。
 
 2.  **启动Streamlit前端应用**
     在新的终端窗口中运行：
     ```bash
-    streamlit run app_streamlit/Home.py
+    uv run streamlit run app_streamlit/Home.py
     ```
     前端应用将在 `http://localhost:8501` 运行。
     
 3.  **启动Taskiq Worker进程**
     在新的终端窗口中运行：
     ```bash
-    taskiq worker app.tasks.broker:broker
+    uv run taskiq worker app.tasks.broker:broker --log-level INFO --fs-discover
     ```
 
 ### Docker部署
