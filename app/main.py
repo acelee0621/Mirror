@@ -11,7 +11,14 @@ from app.core.database import (
 )
 from app.core.taskiq_app import broker
 from app.api.v1 import health
-from app.api.v1.endpoints import person, account, transaction, counterparty, file_upload
+from app.api.v1.endpoints import (
+    person,
+    account,
+    transaction,
+    counterparty,
+    file_upload,
+    analysis,
+)
 
 
 @asynccontextmanager
@@ -60,6 +67,7 @@ app.include_router(account.router, prefix="/api/v1")
 app.include_router(transaction.router, prefix="/api/v1")
 app.include_router(counterparty.router, prefix="/api/v1")
 app.include_router(file_upload.router, prefix="/api/v1")
+app.include_router(analysis.router, prefix="/api/v1")
 
 
 @app.exception_handler(Exception)
