@@ -98,14 +98,52 @@ class CounterpartyRepository(
             select(
                 # 我们只选择需要聚合的字段
                 self.model.name,
-                func.sum(income_case).label("total_income"),
-                func.sum(expense_case).label("total_expense"),
+                func.coalesce(func.sum(income_case), 0).label("total_income"),
+                func.coalesce(func.sum(expense_case), 0).label("total_expense"),
                 func.count(Transaction.id).label("transaction_count"),
             )
             .join(Transaction, self.model.id == Transaction.counterparty_id)
             .join(Account, Transaction.account_id == Account.id)
             .where(Account.owner_id == person_id)
             .group_by(self.model.name)  # <-- 核心思路：按名称分组
+        )
+
+        result = await session.execute(statement)
+        return [row._asdict() for row in result.all()]
+
+    async def get_summary_by_person_ids_grouped_by_name(
+        self, session: AsyncSession, *, person_ids: list[int]
+    ) -> list[dict[str, Any]]:
+        """
+        获取一个或多个用户与所有对手方的资金往来汇总，按对手方名称聚合。
+        V2版：增加 HAVING 子句，只返回与分析组内多于一个成员有交易的“共同对手方”。
+        """
+        if not person_ids or len(person_ids) < 2:
+            # 如果分析组少于两人，则“共同对手方”无从谈起，直接返回空列表
+            return []
+
+        income_case = case(
+            (Transaction.transaction_type == "CREDIT", Transaction.amount), else_=0
+        )
+        expense_case = case(
+            (Transaction.transaction_type == "DEBIT", Transaction.amount), else_=0
+        )
+
+        statement = (
+            select(
+                self.model.name,
+                func.coalesce(func.sum(income_case), 0).label("total_income"),
+                func.coalesce(func.sum(expense_case), 0).label("total_expense"),
+                func.count(Transaction.id).label("transaction_count"),
+                # 新增一个字段，用来计算与多少个不同的人发生了交易
+                func.count(func.distinct(Account.owner_id)).label("person_count"),
+            )
+            .join(Transaction, self.model.id == Transaction.counterparty_id)
+            .join(Account, Transaction.account_id == Account.id)
+            .where(Account.owner_id.in_(person_ids))
+            .group_by(self.model.name)
+            # 核心逻辑：HAVING子句，筛选出 person_count > 1 的分组
+            .having(func.count(func.distinct(Account.owner_id)) > 1)
         )
 
         result = await session.execute(statement)

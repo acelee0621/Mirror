@@ -29,6 +29,7 @@ def make_sidebar():
         st.markdown("---")
         st.header("智能分析")        
         st.page_link("pages/6_Forensic_Analysis.py", label="法证分析", icon="🔬")
+        st.page_link("pages/7_Group_Analysis.py", label="共同对手方分析", icon="🔗")
         st.markdown("---")
         st.header("数据管理")
         st.page_link("pages/1_File_Upload.py", label="文件上传", icon="📄")        

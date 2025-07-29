@@ -2,12 +2,11 @@
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, subqueryload
+from sqlalchemy.orm import selectinload
 from typing import Any
 
 from app.repository.base import BaseRepository
 from app.models.transaction import Transaction
-from app.models.person import Person
 from app.models.account import Account
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
@@ -22,7 +21,9 @@ class TransactionRepository(
             select(self.model)
             .where(self.model.id == transaction_id)
             .options(
-                selectinload(self.model.account), selectinload(self.model.counterparty)
+                # 【核心修复点】: 同样在这里也预加载 owner
+                selectinload(self.model.account).selectinload(Account.owner),
+                selectinload(self.model.counterparty),
             )
         )
         result = await session.scalars(statement)
@@ -35,7 +36,9 @@ class TransactionRepository(
             select(self.model)
             .where(self.model.account_id == account_id)
             .options(
-                selectinload(self.model.account), selectinload(self.model.counterparty)
+                # 【核心修复点】: 预加载 account 下的 owner
+                selectinload(self.model.account).selectinload(Account.owner),
+                selectinload(self.model.counterparty),
             )
             .order_by(self.model.transaction_date.asc())
             .offset(skip)
@@ -95,6 +98,35 @@ class TransactionRepository(
 
         # 在所有批次都执行完毕后，统一提交事务
         await session.commit()
+
+    async def get_multi_by_person_ids(
+        self,
+        session: AsyncSession,
+        *,
+        person_ids: list[int],
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Transaction]:
+        """
+        获取一个或多个用户的所有交易记录。
+        """
+        statement = (
+            select(self.model)
+            .join(Account, self.model.account_id == Account.id)
+            .where(Account.owner_id.in_(person_ids))
+            .options(
+                # --- 【核心修复点】: 使用链式 selectinload 预加载嵌套关系 ---
+                # 这会告诉 SQLAlchemy: "加载交易时，请一并加载其关联的账户，
+                # 并且对于每一个账户，请再一并加载它关联的所有者。"
+                selectinload(self.model.account).selectinload(Account.owner),
+                selectinload(self.model.counterparty),
+            )
+            .order_by(self.model.transaction_date.asc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await session.scalars(statement)
+        return list(result.all())
 
 
 # 创建仓库单例

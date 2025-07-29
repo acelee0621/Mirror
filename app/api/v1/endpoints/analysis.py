@@ -3,8 +3,15 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.services.analysis_service import analysis_service
-from app.schemas.analysis import UturnAnalysisRequest, UturnAnalysisResponse, UturnEvent
+from app.services.analysis_service import analysis_service, AnalysisService
+from app.schemas.analysis import (
+    UturnAnalysisRequest,
+    UturnAnalysisResponse,
+    UturnEvent,
+    GroupAnalysisRequest,
+)
+from app.schemas.transaction import TransactionPublicWithOwner
+from app.schemas.counterparty import CounterpartyAnalysisSummary
 
 router = APIRouter(prefix="/analysis", tags=["🔬 Analysis"])
 
@@ -35,7 +42,6 @@ async def run_u_turn_analysis(
         amount_tolerance=request.amount_tolerance,
     )
 
-    # --- 【核心修复点】: 手动将字典列表转换为 Pydantic 模型对象列表 ---
     # 2. 遍历服务层返回的每一个事件字典
     validated_events: list[UturnEvent] = []
     for event in orm_events:
@@ -51,3 +57,39 @@ async def run_u_turn_analysis(
 
     # 4. 将经过验证和转换的 Pydantic 对象列表传递给最终的响应模型
     return UturnAnalysisResponse(found_events=validated_events)
+
+
+@router.post(
+    "/group/transactions",
+    response_model=list[TransactionPublicWithOwner],
+    summary="执行多人联合交易流水分析",
+)
+async def run_group_transaction_analysis(
+    request: GroupAnalysisRequest,
+    session: AsyncSession = Depends(get_db),
+    service: AnalysisService = Depends(),
+):
+    """
+    接收一个用户ID列表，返回这些用户合并后的、按时间排序的完整交易流水。
+    """
+    return await service.perform_group_transaction_analysis(
+        session, person_ids=request.person_ids
+    )
+
+
+@router.post(
+    "/group/counterparties",
+    response_model=list[CounterpartyAnalysisSummary],
+    summary="执行多人联合对手方分析",
+)
+async def run_group_counterparty_analysis(
+    request: GroupAnalysisRequest,
+    session: AsyncSession = Depends(get_db),
+    service: AnalysisService = Depends(),
+):
+    """
+    接收一个用户ID列表，返回这些用户合并后的、按名称聚合的对手方网络分析。
+    """
+    return await service.perform_group_counterparty_analysis(
+        session, person_ids=request.person_ids
+    )

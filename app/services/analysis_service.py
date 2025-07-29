@@ -5,11 +5,15 @@ from typing import Any
 
 from app.services.rule_based_analysis import find_u_turn_transactions
 from app.repository.transaction import transaction_repository
+from app.repository.counterparty import counterparty_repository
+from app.models.transaction import Transaction
+from app.schemas.counterparty import CounterpartyAnalysisSummary
 
 
 class AnalysisService:
     def __init__(self):
         self.transaction_repo = transaction_repository
+        self.counterparty_repo = counterparty_repository
 
     async def detect_u_turn_transactions(
         self,
@@ -75,6 +79,32 @@ class AnalysisService:
                 )
 
         return hydrated_events
+
+    async def perform_group_transaction_analysis(
+        self, session: AsyncSession, *, person_ids: list[int]
+    ) -> list[Transaction]:
+        """
+        执行多人联合交易流水分析。
+        """
+        # 直接调用更新后的仓库方法，一次性获取所有人的交易数据
+        all_transactions = await self.transaction_repo.get_multi_by_person_ids(
+            session, person_ids=person_ids
+        )
+        return all_transactions
+
+    async def perform_group_counterparty_analysis(
+        self, session: AsyncSession, *, person_ids: list[int]
+    ) -> list[CounterpartyAnalysisSummary]:
+        """
+        执行多人联合对手方网络分析。
+        """
+        summary_data = (
+            await self.counterparty_repo.get_summary_by_person_ids_grouped_by_name(
+                session, person_ids=person_ids
+            )
+        )
+        # 将数据库返回的原始行数据，转换为Pydantic模型列表
+        return [CounterpartyAnalysisSummary.model_validate(row) for row in summary_data]
 
 
 analysis_service = AnalysisService()

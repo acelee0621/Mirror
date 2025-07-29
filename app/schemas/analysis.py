@@ -2,6 +2,7 @@
 from pydantic import Field, computed_field, BaseModel
 from app.schemas.base import BaseSchema
 from app.schemas.transaction import TransactionPublic
+from app.schemas.counterparty import CounterpartyAnalysisSummary
 
 
 class CounterpartySummary(BaseSchema):
@@ -50,3 +51,30 @@ class UturnAnalysisResponse(BaseModel):
     """“快进快出”分析的响应体模型"""
 
     found_events: list[UturnEvent]
+
+
+# 多人联合分析模型
+class GroupAnalysisRequest(BaseModel):
+    """
+    用于发起多人联合分析的请求模型。
+    """
+
+    person_ids: list[int] = Field(
+        ..., min_length=1, description="要进行联合分析的用户ID列表"
+    )
+
+
+class GroupTransactionResponse(BaseModel):
+    """
+    多人联合分析的交易流水响应模型。
+    """
+
+    transactions: list[TransactionPublic]
+
+
+class GroupCounterpartyResponse(BaseModel):
+    """
+    多人联合分析的对手方网络响应模型。
+    """
+
+    counterparty_summary: list[CounterpartyAnalysisSummary]
